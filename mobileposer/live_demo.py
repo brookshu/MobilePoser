@@ -54,6 +54,7 @@ class IMUSet:
         self._acc_buffer = []
         self._is_reading = False
         self._read_thread = None
+        self.latest_hr = 0
 
     def _read(self):
         """
@@ -62,7 +63,8 @@ class IMUSet:
         while self._is_reading:
             data, addr = self._imu_socket.recvfrom(1024)
             data_str = data.decode("utf-8")
-
+            self.latest_hr = int(data_str.split('$')[1][:-1])
+            data_str = data_str.split('$')[0] + '$'
             a = np.array(data_str.split("#")[0].split(",")).astype(np.float64)
             q = np.array(data_str.split("#")[1].strip("$").split(",")).astype(np.float64)
 
@@ -202,6 +204,7 @@ if __name__ == '__main__':
     accs, oris = [], []
     raw_accs, raw_oris = [], []
     poses, trans = [], []
+    heartrate = []
 
     model.eval()
     while running:
@@ -211,7 +214,7 @@ if __name__ == '__main__':
         ori_raw = quaternion_to_rotation_matrix(ori_raw).view(-1, n_imus, 3, 3)
         glb_acc = (smpl2imu.matmul(acc_raw.view(-1, n_imus, 3, 1)) - acc_offsets).view(-1, n_imus, 3)
         glb_ori = smpl2imu.matmul(ori_raw).matmul(device2bone)
-
+        
         # normalization 
         _acc = glb_acc.view(-1, 5, 3)[:, [1, 4, 3, 0, 2]] / amass.acc_scale
         _ori = glb_ori.view(-1, 5, 3, 3)[:, [1, 4, 3, 0, 2]]
@@ -252,6 +255,7 @@ if __name__ == '__main__':
             raw_oris.append(ori_raw)
             poses.append(pred_pose)
             trans.append(pred_tran)
+            heartrate.append(imu_set.latest_hr)
 
         # send pose
         if args.vis:
@@ -272,12 +276,13 @@ if __name__ == '__main__':
             'ori': torch.cat(oris, dim=0),
             'pose': torch.cat(poses, dim=0),
             'tran': torch.cat(trans, dim=0),
+            'hr' : torch.cat([torch.tensor([hr]) for hr in heartrate], dim=0),
             'calibration': {
                 'smpl2imu': smpl2imu,
                 'device2bone': device2bone
             }
         }
-        torch.save(data, paths.dev_data / f'dev_{int(time.time())}.pt')
+        torch.save(data, 'dev_data/' + f'dev_{int(time.time())}.pt')
 
     # clean up threads
     get_input_thread.join()

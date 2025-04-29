@@ -8,6 +8,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 from queue import Queue
 import select
 from argparse import ArgumentParser
+import datetime
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -130,6 +131,7 @@ if __name__ == "__main__":
     frames = 0
     prev_timestamp = 0
     curr_timestamp = 0
+    latest_hr = 0
     glb_ori, glb_acc = None, None
 
     while True:
@@ -146,6 +148,14 @@ if __name__ == "__main__":
 
             # Process received data
             vis_str, device_id, curr_acc, curr_ori, timestamps = process_data(data)
+            if vis_str == "hr_data":
+                date = datetime.datetime.fromtimestamp(timestamps)
+                print("Heart Rate:", curr_acc, "BPM at time:", str(date.strftime("%B %d, %Y at %I:%M %p")))
+            #print(vis_str, device_id, curr_acc, curr_ori, timestamps)
+            if vis_str == "hr_data":
+                #send_and_save_data(send_sock, sensor_data.virtual_acc, sensor_data.virtual_ori, curr_acc) # 15, 19
+                latest_hr = curr_acc
+                continue
             curr_timestamp = sensor_data.update(device_id, curr_acc, curr_ori, timestamps)
             glb_ori, glb_acc = sensor2global(
                 sensor_data.get_orientation(device_id),
@@ -166,7 +176,7 @@ if __name__ == "__main__":
             time_diff = curr_timestamp - prev_timestamp
             if time_diff >= min_time_diff:
                 # send data via socket to live demo
-                send_and_save_data(send_sock, sensor_data.virtual_acc, sensor_data.virtual_ori)
+                send_and_save_data(send_sock, sensor_data.virtual_acc, sensor_data.virtual_ori, latest_hr)
                 prev_timestamp = curr_timestamp
 
         except Exception as e:
