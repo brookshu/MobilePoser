@@ -16,7 +16,7 @@ def init_sockets(host, ports):
     return sockets
 
 
-def send_and_save_data(socket, virtual_acc, virtual_ori, save=True):
+def send_and_save_data(socket, virtual_acc, virtual_ori, hr, save=True):
     acc, ori = [], []
     for _id in range(5):
         acc.append(virtual_acc[_id])
@@ -26,7 +26,8 @@ def send_and_save_data(socket, virtual_acc, virtual_ori, save=True):
     o = np.array(ori)
 
     s = ','.join(['%g' % v for v in a.flatten()]) + '#' + \
-        ','.join(['%g' % v for v in o.flatten()]) + '$'
+        ','.join(['%g' % v for v in o.flatten()]) + '$' + \
+        str(hr) + 'h'
 
     # save the string with a unix_timestamp 
     unix_time = str(time.time())

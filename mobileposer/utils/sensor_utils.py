@@ -76,6 +76,7 @@ class SensorData:
 
 def process_data(message):
     """Process the data from the sensors (e.g., iPhone, Apple Watch, etc.)."""
+    #print(message)
     message = message.strip()
     if not message:
         return
@@ -99,7 +100,9 @@ def process_data(message):
         except Exception as e:
             print("(2) Exception encountered: ", e)
             continue
-    
+    if len(data) == 2: # HR DATA
+        return "hr_data", sensor.device_ids[f"{device_id.capitalize()}_{device_type}"[:-2]], int(data[1]), 0, data[0]
+
     if (len(data) != len(KEYS)) and (len(data) != len(KEYS) - 3):
         print("Missing data!")
         return
